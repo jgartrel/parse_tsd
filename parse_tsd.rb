@@ -124,3 +124,5 @@ puts "Hello World"
 file      = File.open("./test_data/23121000.TSD")
 pp tsd_data = TSD_Data.read(file)
 pp tsd_data.header.boardID
+
+raise "Unknown Version" unless tsd_data.dataID == "TSD\x02"
