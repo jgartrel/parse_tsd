@@ -76,5 +76,5 @@ end
 
 puts "Hello World"
 
-file      = File.open("test3.bin")
+file      = File.open("./test_data/test3.bin")
 pp header = TSD_Record.read(file)
