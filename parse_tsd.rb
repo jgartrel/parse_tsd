@@ -123,3 +123,22 @@ pp tsd_data.header.boardID
 file.close
 
 raise "Unknown Version" unless tsd_data.dataID == "TSD\x02"
+
+file = File.open("./test_data/test3.bin")
+pp tsd = TSD_Record_V2.read(file)
+pp tsd.snapshot
+
+csv_row = []
+
+tsd.each_pair do |k,v|
+  if v.respond_to?(:each_with_index)
+    v.each_with_index do |member,i|
+      csv_row.push("#{k}#{i}")
+    end
+  else
+    csv_row.push("#{k}")
+  end
+end
+puts csv_row.join(",")
+
+file.close
