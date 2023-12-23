@@ -3,7 +3,7 @@
 require 'bindata'
 require 'pp'
 
-class TSD_Record < BinData::Record
+class TSD_Record_V2 < BinData::Record
   endian :little
 
 #  struct :fft_rank do 
@@ -77,4 +77,4 @@ end
 puts "Hello World"
 
 file      = File.open("./test_data/test3.bin")
-pp header = TSD_Record.read(file)
+pp header = TSD_Record_V2.read(file)
