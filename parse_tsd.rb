@@ -139,6 +139,17 @@ tsd.each_pair do |k,v|
     csv_row.push("#{k}")
   end
 end
+
+csv_row += [
+  "%d" % tsd_data.header.timestamp,
+  "%d" % tsd_data.header.timezoneOffset,
+  "%d" % tsd_data.header.uptimeMillis,
+  "%s" % tsd_data.header.gitVersion,
+  "%s" % tsd_data.header.boardID,
+  "%d" % tsd_data.header.serialNum,
+  "%d" % tsd_data.header.alertMode,
+]
+
 puts csv_row.join(",")
 
 file.close
