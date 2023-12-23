@@ -3,6 +3,7 @@
 require 'pp'
 require 'bindata'
 require 'date'
+require 'yaml'
 
 class Unique_ID < BinData::Record
   endian :little
@@ -397,6 +398,7 @@ file_offsets.each do |addr|
   source.seek(data_start, IO::SEEK_SET)
   cluster_count = 2 
   fragment_db = []
+  data_db = []
   while (buf = source.read(bytes_per_cluster)) do
     cluster_offset = data_base + cluster_count * bytes_per_cluster
     #puts "Cluster: #{cluster_count}, 0x%08x" % cluster_offset
@@ -416,11 +418,12 @@ file_offsets.each do |addr|
           :cluster   => cluster_count,
           :pos       => pos,
           :size      => remaining_bytes,
+          :data      => buf.slice(pos,remaining_bytes),
           :type      => 1
         }
         fragment_db.push(fragment) 
-        puts ""
-        pp fragment
+        #puts ""
+        #pp fragment
         #puts "Possible remnant, cluster: %d, pos: %d, size: %d" % [ cluster_count, pos, remaining_bytes  ]
       end
       if (record_start < 0)
@@ -429,11 +432,12 @@ file_offsets.each do |addr|
           :cluster   => cluster_count,
           :pos       => 0,
           :size      => pos,
-          :type      => 2
+          :data      => buf.slice(0,pos),
+          :type      => 4
         }
         fragment_db.push(fragment) 
-        puts ""
-        pp fragment
+        #puts ""
+        #pp fragment
         #puts "TSD runt, cluster: %d, pos: %d" % [ cluster_count, record_start ]
         next
       end
@@ -443,6 +447,7 @@ file_offsets.each do |addr|
           :cluster   => cluster_count,
           :pos       => 0,
           :size      => record_start,
+          :data      => buf.slice(0,record_start),
           :type      => 3
         }
         if buf.slice(0,4) == "SDAT" || buf.slice(0,4) == "TADS"
@@ -450,8 +455,8 @@ file_offsets.each do |addr|
           next
         end
         fragment_db.push(fragment) 
-        puts ""
-        pp fragment
+        #puts ""
+        #pp fragment
         #puts "TSD runt, cluster: %d, pos: %d" % [ cluster_count, record_start ]
         next
       end
@@ -462,15 +467,25 @@ file_offsets.each do |addr|
           :cluster   => cluster_count,
           :pos       => record_start,
           :size      => current_record.length,
-          :type      => 4 
+          :data      => current_record,
+          :type      => 2
         }
         fragment_db.push(fragment) 
-        puts ""
-        pp fragment
+        #puts ""
+        #pp fragment
         #puts "TSD runt, cluster: %d, pos: %d, size: %d" % [ cluster_count, record_start, current_record.length  ]
         next
       end
       #puts "TSD: 0x%08x" % [ cluster_offset + record_start ] 
+      datum = {
+        :timestamp => buf.slice(record_start,8).unpack('V*').first,
+        :cluster   => cluster_count,
+        :pos       => record_start,
+        :size      => current_record.length,
+        :data      => current_record,
+        :type      => 0 
+      }
+      data_db.push(datum) 
       print "."
     end
     cluster_count += 1
@@ -484,7 +499,57 @@ file_offsets.each do |addr|
   # Write chunks to file in order
   puts "(EOF)"
 
+  fragments_recovered = 0
+  data2_db = []
+  unpaired_db = []
   fragment_db.sort_by!{ |h| h[:timestamp] }
-  pp fragment_db
+  # pp({}.merge(fragment_db[0]))
+  #fragment_db.each { |h| pp {}.merge(h) }
+  fragment_db.each { |h| pp({}.merge(h).delete_if{|k,v| k == :data}) }
+  while ( fragment = fragment_db.shift )
+    if ( fragment_next = fragment_db[0] ) 
+      if ( (fragment_next[:timestamp] - fragment[:timestamp] < 10) &&
+           (fragment[:type] + fragment_next[:type] == 5) &&
+           (fragment[:size] + fragment_next[:size] == tsd_data.recordSize) )
+        fragment[:data] += fragment_next[:data]
+        fragment[:size] += fragment_next[:size]
+        data_db.push(fragment)
+        fragment_db.shift
+        fragments_recovered += 1
+        next
+      end
+    end
+    unpaired_db.push(fragment)
+  end
+  #puts ""
+  #data2_db.sort_by!{ |h| h[:timestamp] }
+  #data2_db.each { |h| pp({}.merge(h).delete_if{|k,v| k == :data}) }
+  puts ""
+  unpaired_db.sort_by!{ |h| h[:timestamp] }
+  unpaired_db.each { |h| pp({}.merge(h).delete_if{|k,v| k == :data}) }
+  puts ""
+  unpaired_db.each do |fragment|
+    puts "Checking Timestamp: #{fragment[:timestamp]}"
+    pp data_db.select { |h| h[:timestamp] == fragment[:timestamp] }
+  end
+  File.open(filename + ".yml", "w") { |file| file.write(unpaired_db.to_yaml) }
+  puts ""
+  data_db.sort_by!{ |h| h[:timestamp] }
+  data_db.each_with_index do |tsd,i|
+    if tsd[:timestamp] == 0
+      pp({}.merge(tsd).delete_if{|k,v| k == :data})
+    end
+    if tsd[:timestamp] == 1702181423
+      pp({}.merge(tsd).delete_if{|k,v| k == :data})
+      pp({}.merge(data_db[i-1]).delete_if{|k,v| k == :data})
+    end
+    unless f.write(tsd[:data]) == tsd_data.recordSize
+      puts "Invalid data size:"
+      pp tsd
+    end
+  end
+  puts "Fragments recovered: #{fragments_recovered}"
+  puts "Fragments discarded: #{unpaired_db.length}"
+  puts "Total data points written: #{data_db.length}"
   exit
 end
