@@ -6,11 +6,6 @@ require 'pp'
 class TSD_Record_V2 < BinData::Record
   endian :little
 
-#  struct :fft_rank do 
-#    uint16 index
-#    uint16 magnitude
-#  end
- 
   struct :tsd_data do 
     uint64 :timestamp
     uint32 :millisTime
@@ -59,7 +54,6 @@ class TSD_Record_V2 < BinData::Record
     uint16 :dcOffset
     uint16 :dcOffsetBinCount
 
-#    S_FFT_RANK_T fftRank[10]
     array :fftRank, initial_length: 10 do
       uint16 :bin
       uint16 :magnitude
