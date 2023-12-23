@@ -1,0 +1,31 @@
+# Find address of all SDAT from /dev/disk2s1 or /dev/disk2 (minus 8192 * 512)
+
+# bytes_per_sector = 512
+# reserved_sectors = 32
+# number_of_fats = 2
+# size_of_fat = 15264 (0x3ba0)
+# sectors_per_cluster = 32
+# bytes_per_cluster = 16384 (bytes_per_sector * cluster_size) 
+# starting_cluster = 2
+
+# FatStartSector = BPB_ResvdSecCnt;
+# FatSectors = BPB_FATSz * BPB_NumFATs;
+
+# RootDirStartSector = FatStartSector + FatSectors;
+# RootDirSectors = (32 * BPB_RootEntCnt + BPB_BytsPerSec - 1) / BPB_BytsPerSec;
+
+# DataStartSector = RootDirStartSector + RootDirSectors;
+# DataSectors = BPB_TotSec - DataStartSector;
+
+# CountofClusters = DataSectors / BPB_SecPerClus;
+# A volume with count of clusters <=4085 is FAT12.
+# A volume with count of clusters >=4086 and <=65525 is FAT16.
+# A volume with count of clusters >=65526 is FAT32.
+
+fat_entry_size = 4
+
+# irb(main):024:0> ("ef0000".to_i(16) - ((512 * 32) + (512 * 15264 * 2))) / 16384 + 2
+# => 3
+# irb(main):025:0> ((512 * 32) + (512 * 15264 * 2)  + (16384 * (3-2))).to_s(16) 
+# => "ef0000"
+

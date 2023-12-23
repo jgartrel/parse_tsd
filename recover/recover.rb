@@ -1,0 +1,295 @@
+#!/usr/bin/env ruby
+
+require 'pp'
+
+# Find address of all SDAT from /dev/disk2s1 or /dev/disk2 (minus 8192 * 512)
+
+file_offsets = [
+  "00ef0000",
+  "00ef4000",
+  "03930000",
+  "03938000",
+  "03960000",
+  "03968000",
+  "03970000",
+  "03978000",
+  "03980000",
+  "03988000",
+  "03a00000",
+  "03a08000",
+  "03a18000",
+  "03a20000",
+  "04068000",
+  "04070000",
+  "04388000",
+  "04390000",
+  "04690000",
+  "04698000",
+  "046a0000",
+  "046a8000",
+  "04c30000",
+  "04c38000",
+  "04f08000",
+  "04f10000",
+  "04f18000",
+  "04f20000",
+  "050e8000",
+  "050f0000",
+  "050f8000",
+  "05100000",
+  "05110000",
+  "05118000",
+  "05518000",
+  "05520000",
+  "05528000",
+  "05530000",
+  "05570000",
+  "05578000",
+  "05af0000",
+  "05af8000",
+  "05b60000",
+  "05b68000",
+  "06450000",
+  "06458000",
+  "06470000",
+  "06478000",
+  "06480000",
+  "06488000",
+  "06548000",
+  "06550000",
+  "066e0000",
+  "066e8000",
+  "06928000",
+  "06930000",
+  "06cb0000",
+  "06cb8000",
+  "06cc0000",
+  "06cc8000",
+  "06d18000",
+  "06d20000",
+  "06d30000",
+  "06d38000",
+  "06d40000",
+  "06d48000",
+  "06d58000",
+  "06d60000",
+  "07338000",
+  "07340000",
+  "078f8000",
+  "07900000",
+  "07ea8000",
+  "07eb0000",
+  "084f8000",
+  "08500000",
+  "08d40000",
+  "08d48000",
+  "08f10000",
+  "08f18000",
+  "09598000",
+  "095a0000",
+  "09b80000",
+  "09b88000",
+  "0a028000",
+  "0a030000",
+  "0a370000",
+  "0a378000",
+  "0a960000",
+  "0a968000",
+  "0ad90000",
+  "0ad98000",
+  "0b398000",
+  "0b3a0000",
+  "0b798000",
+  "0b7a0000",
+  "0b8e8000",
+  "0b8f0000",
+  "0bd50000",
+  "0bd58000",
+  "0c0d0000",
+  "0c0d8000",
+  "0c440000",
+  "0c448000",
+  "0c460000",
+  "0c468000",
+  "0ca88000",
+  "0ca90000",
+  "0cc90000",
+  "0cc98000",
+  "0cf10000",
+  "0cf18000",
+  "0d0e8000",
+  "0d0f0000",
+  "0d570000",
+  "0d578000"
+]
+
+file_offsets2 = [
+  0x00ef0000,
+  0x00ef4000,
+  0x03930000,
+  0x03938000,
+  0x03960000,
+  0x03968000,
+  0x03970000,
+  0x03978000,
+  0x03980000,
+  0x03988000,
+  0x03a00000,
+  0x03a08000,
+  0x03a18000,
+  0x03a20000,
+  0x04068000,
+  0x04070000,
+  0x04388000,
+  0x04390000,
+  0x04690000,
+  0x04698000,
+  0x046a0000,
+  0x046a8000,
+  0x04c30000,
+  0x04c38000,
+  0x04f08000,
+  0x04f10000,
+  0x04f18000,
+  0x04f20000,
+  0x050e8000,
+  0x050f0000,
+  0x050f8000,
+  0x05100000,
+  0x05110000,
+  0x05118000,
+  0x05518000,
+  0x05520000,
+  0x05528000,
+  0x05530000,
+  0x05570000,
+  0x05578000,
+  0x05af0000,
+  0x05af8000,
+  0x05b60000,
+  0x05b68000,
+  0x06450000,
+  0x06458000,
+  0x06470000,
+  0x06478000,
+  0x06480000,
+  0x06488000,
+  0x06548000,
+  0x06550000,
+  0x066e0000,
+  0x066e8000,
+  0x06928000,
+  0x06930000,
+  0x06cb0000,
+  0x06cb8000,
+  0x06cc0000,
+  0x06cc8000,
+  0x06d18000,
+  0x06d20000,
+  0x06d30000,
+  0x06d38000,
+  0x06d40000,
+  0x06d48000,
+  0x06d58000,
+  0x06d60000,
+  0x07338000,
+  0x07340000,
+  0x078f8000,
+  0x07900000,
+  0x07ea8000,
+  0x07eb0000,
+  0x084f8000,
+  0x08500000,
+  0x08d40000,
+  0x08d48000,
+  0x08f10000,
+  0x08f18000,
+  0x09598000,
+  0x095a0000,
+  0x09b80000,
+  0x09b88000,
+  0x0a028000,
+  0x0a030000,
+  0x0a370000,
+  0x0a378000,
+  0x0a960000,
+  0x0a968000,
+  0x0ad90000,
+  0x0ad98000,
+  0x0b398000,
+  0x0b3a0000,
+  0x0b798000,
+  0x0b7a0000,
+  0x0b8e8000,
+  0x0b8f0000,
+  0x0bd50000,
+  0x0bd58000,
+  0x0c0d0000,
+  0x0c0d8000,
+  0x0c440000,
+  0x0c448000,
+  0x0c460000,
+  0x0c468000,
+  0x0ca88000,
+  0x0ca90000,
+  0x0cc90000,
+  0x0cc98000,
+  0x0cf10000,
+  0x0cf18000,
+  0x0d0e8000,
+  0x0d0f0000,
+  0x0d570000,
+  0x0d578000
+]
+
+bytes_per_sector = 512
+reserved_sectors = 32
+number_of_fats = 2
+sectors_of_fat = "3ba0".to_i(16)
+sectors_per_cluster = 32
+bytes_per_cluster = sectors_per_cluster * bytes_per_sector
+starting_cluster = 2
+fat_entry_bytes = 4
+
+
+puts sectors_of_fat
+puts bytes_per_cluster
+
+fat_offset = reserved_sectors * bytes_per_sector
+fat_section_size = sectors_of_fat * number_of_fats * bytes_per_sector
+data_start = fat_offset + fat_section_size
+data_base  = fat_offset + (sectors_of_fat * number_of_fats * bytes_per_sector) -  2 * bytes_per_cluster
+
+puts "Offset of FAT table : 0x #{fat_offset.to_s(16)}"
+puts "Offset of Cluster 2 : 0x #{data_start.to_s(16)}"
+puts "Offset of Cluster 0 : 0x #{data_base.to_s(16)}"
+
+# Seek to FAT offset
+test_offset = 0x00eec000
+
+file_offsets.each do |addr|
+  fat_entry_num = (addr.to_i(16) - data_start) / 16384 + 2
+  fat_entry_offset = fat_offset + fat_entry_bytes * (fat_entry_num - 1)
+  puts "File offset: #{addr}, FAT Entry: #{fat_entry_num}, Entry Offset: 0x#{fat_entry_offset.to_s(16)}, #{(fat_entry_offset & 0xFFFFFFF0).to_s(16)}"
+end
+
+
+# FatStartSector = BPB_ResvdSecCnt;
+# FatSectors = BPB_FATSz * BPB_NumFATs;
+
+# RootDirStartSector = FatStartSector + FatSectors;
+# RootDirSectors = (32 * BPB_RootEntCnt + BPB_BytsPerSec - 1) / BPB_BytsPerSec;
+
+# DataStartSector = RootDirStartSector + RootDirSectors;
+# DataSectors = BPB_TotSec - DataStartSector;
+
+# CountofClusters = DataSectors / BPB_SecPerClus;
+# A volume with count of clusters <=4085 is FAT12.
+# A volume with count of clusters >=4086 and <=65525 is FAT16.
+# A volume with count of clusters >=65526 is FAT32.
+
+# irb(main):024:0> ("ef0000".to_i(16) - ((512 * 32) + (512 * 15264 * 2))) / 16384 + 2
+# => 3
+# irb(main):025:0> ((512 * 32) + (512 * 15264 * 2)  + (16384 * (3-2))).to_s(16) 
+# => "ef0000"
+
