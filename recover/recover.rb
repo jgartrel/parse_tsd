@@ -342,7 +342,7 @@ end
 # irb(main):025:0> ((512 * 32) + (512 * 15264 * 2)  + (16384 * (3-2))).to_s(16) 
 # => "ef0000"
 
-#file = File.open("/dev/disk2s1", "rb")
+#source = File.open("/dev/disk2s1", "rb")
 source = File.open("/Users/jgartrel/Documents/Arduino/Sopor_Ear_Low_Power_OTA/save/sd_data2/fat32_info/non_working_disk/fat_32_w_dir4.bin", "r")
 
 file_offsets.each do |addr|
@@ -513,9 +513,14 @@ file_offsets.each do |addr|
            (fragment[:size] + fragment_next[:size] == tsd_data.recordSize) )
         fragment[:data] += fragment_next[:data]
         fragment[:size] += fragment_next[:size]
-        data_db.push(fragment)
+        if data_db.detect{ |h| h[:timestamp] == fragment[:timestamp] }
+          puts "Avoid Duplicate:"
+          pp({}.merge(fragment).delete_if{|k,v| k == :data})
+        else
+          data_db.push(fragment)
+          fragments_recovered += 1
+        end
         fragment_db.shift
-        fragments_recovered += 1
         next
       end
     end
@@ -535,21 +540,57 @@ file_offsets.each do |addr|
   File.open(filename + ".yml", "w") { |file| file.write(unpaired_db.to_yaml) }
   puts ""
   data_db.sort_by!{ |h| h[:timestamp] }
+  ts_duration = 0
+  ts_prev = 0
+  tsd_prev = {}
   data_db.each_with_index do |tsd,i|
     if tsd[:timestamp] == 0
       pp({}.merge(tsd).delete_if{|k,v| k == :data})
+      next 
+    end
+    if tsd[:data] == tsd_prev[:data]
+      puts "Skipping Duplicate: #{tsd[:timestamp]}"
+      next
+    end
+    if tsd[:timestamp] == ts_prev
+      puts "Duplicate Timestamp:"
+      pp tsd_prev
+      pp tsd
+      puts ""
     end
     if tsd[:timestamp] == 1702181423
+      puts "Timestamp 1702181423:"
       pp({}.merge(tsd).delete_if{|k,v| k == :data})
       pp({}.merge(data_db[i-1]).delete_if{|k,v| k == :data})
+      puts ""
     end
     unless f.write(tsd[:data]) == tsd_data.recordSize
       puts "Invalid data size:"
       pp tsd
     end
+    ts_prev = tsd[:timestamp]
+    tsd_prev = tsd
+    ts_duration = tsd[:timestamp] - tsd_data.header.timestamp
   end
-  puts "Fragments recovered: #{fragments_recovered}"
-  puts "Fragments discarded: #{unpaired_db.length}"
+  puts ""
+  ts_gaps = 0
+  ts_prev = tsd_data.header.timestamp
+  tsd_prev = {}
+  puts "TSD gaps:"
+  data_db.each do |tsd|
+    next if tsd[:timestamp] == 0
+    delta_time = tsd[:timestamp] - ts_prev
+    if delta_time > 12
+      pp({:delta => delta_time}.merge(tsd).delete_if{|k,v| [:data,:size,:type].include?(k)})
+      ts_gaps += 1
+    end
+    ts_prev = tsd[:timestamp]
+  end
+  puts ""
+  puts "Timestamp gap count : #{ts_gaps}"
+  puts "Timestamp duration  : #{ts_duration} seconds"
+  puts "Fragments recovered : #{fragments_recovered}"
+  puts "Fragments discarded : #{unpaired_db.length}"
   puts "Total data points written: #{data_db.length}"
   exit
 end
