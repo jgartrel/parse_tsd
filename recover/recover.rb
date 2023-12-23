@@ -343,7 +343,7 @@ end
 # => "ef0000"
 
 #source = File.open("/dev/disk2s1", "rb")
-source = File.open("/Users/jgartrel/Documents/Arduino/Sopor_Ear_Low_Power_OTA/save/sd_data2/fat32_info/non_working_disk/fat_32_w_dir4.bin", "r")
+source = File.open("/Users/jgartrel/Documents/Arduino/Sopor_Ear_Low_Power_OTA/save/sd_data2/fat32_info/non_working_disk/fat_32_w_dir5.bin", "r")
 
 file_offsets.each do |addr|
   fat_entry_num = (addr.to_i(16) - data_start) / 16384 + 2
@@ -592,5 +592,7 @@ file_offsets.each do |addr|
   puts "Fragments recovered : #{fragments_recovered}"
   puts "Fragments discarded : #{unpaired_db.length}"
   puts "Total data points written: #{data_db.length}"
-  exit
+  puts ""
+  puts "-------------------------------"
+  puts ""
 end
