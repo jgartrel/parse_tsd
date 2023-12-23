@@ -1,6 +1,54 @@
 #!/usr/bin/env ruby
 
 require 'pp'
+require 'bindata'
+require 'date'
+
+class Unique_ID < BinData::Record
+  endian :little
+  uint32 :val1
+  uint32 :val2
+  uint32 :val3
+  uint32 :val4
+
+  def pretty_print(pp)
+    #pp.text "#{val1.to_s(16)
+    pp.text "0x"
+    pp.text "%.8x" % val4
+    pp.text "%.8x" % val3
+    pp.text "%.8x" % val2
+    pp.text "%.8x" % val1
+  end
+
+end
+
+class TSD_Header < BinData::Record
+  endian :little
+
+  uint64    :timestamp
+  int8      :timezoneOffset
+  string    :gitVersion, length: 63, trim_padding: true
+  unique_id :boardID
+  uint32    :serialNum
+  int16     :tareX
+  int16     :tareY
+  int16     :tareZ
+  uint8     :alertMode
+  uint8     :emptyPaddingOne
+  uint32    :uptimeMillis
+end
+
+class TSD_Data < BinData::Record
+  endian :little
+
+  string     :fileID, length: 4
+  uint32     :fileVersion
+  uint32     :headerSize
+  uint32     :emptyPadding
+  tsd_header :header
+  string     :dataID, length: 4
+  uint32     :recordSize
+end
 
 # Find address of all SDAT from /dev/disk2s1 or /dev/disk2 (minus 8192 * 512)
 
@@ -274,16 +322,16 @@ file_offsets.each do |addr|
 end
 
 
-# FatStartSector = BPB_ResvdSecCnt;
-# FatSectors = BPB_FATSz * BPB_NumFATs;
+# FatStartSector = BPB_ResvdSecCnt
+# FatSectors = BPB_FATSz * BPB_NumFATs
 
-# RootDirStartSector = FatStartSector + FatSectors;
-# RootDirSectors = (32 * BPB_RootEntCnt + BPB_BytsPerSec - 1) / BPB_BytsPerSec;
+# RootDirStartSector = FatStartSector + FatSectors
+# RootDirSectors = (32 * BPB_RootEntCnt + BPB_BytsPerSec - 1) / BPB_BytsPerSec
 
-# DataStartSector = RootDirStartSector + RootDirSectors;
-# DataSectors = BPB_TotSec - DataStartSector;
+# DataStartSector = RootDirStartSector + RootDirSectors
+# DataSectors = BPB_TotSec - DataStartSector
 
-# CountofClusters = DataSectors / BPB_SecPerClus;
+# CountofClusters = DataSectors / BPB_SecPerClus
 # A volume with count of clusters <=4085 is FAT12.
 # A volume with count of clusters >=4086 and <=65525 is FAT16.
 # A volume with count of clusters >=65526 is FAT32.
@@ -293,3 +341,150 @@ end
 # irb(main):025:0> ((512 * 32) + (512 * 15264 * 2)  + (16384 * (3-2))).to_s(16) 
 # => "ef0000"
 
+#file = File.open("/dev/disk2s1", "rb")
+source = File.open("/Users/jgartrel/Documents/Arduino/Sopor_Ear_Low_Power_OTA/save/sd_data2/fat32_info/non_working_disk/fat_32_w_dir4.bin", "r")
+
+file_offsets.each do |addr|
+  fat_entry_num = (addr.to_i(16) - data_start) / 16384 + 2
+  fat_entry_offset = fat_offset + fat_entry_bytes * (fat_entry_num - 1)
+  puts "File offset: #{addr}, FAT Entry: #{fat_entry_num}, Entry Offset: 0x#{fat_entry_offset.to_s(16)}, #{(fat_entry_offset & 0xFFFFFFF0).to_s(16)}"
+  # Read header
+  source.seek(addr.to_i(16), IO::SEEK_SET)
+  tsd_data = TSD_Data.new
+  tsd_data.read(source)
+  #####header = IO.binread("testfile", 128, addr.to_i(16)) 
+  #header = source.read(128)
+  #pp header.chars.map { |x| x.ord.to_s(16) } 
+  pp tsd_data
+  pp tsd_data.header.boardID
+
+  #tare_bytes = ""
+  #tare_bytes += "%.4x" % tsd_data.header.tareX
+  #tare_bytes += "%.4x" % tsd_data.header.tareY
+  #tare_bytes += "%.4x" % tsd_data.header.tareZ
+
+  tare_bytes = ""
+  tare_bytes += tsd_data.header.tareX.to_binary_s
+  tare_bytes += tsd_data.header.tareY.to_binary_s
+  tare_bytes += tsd_data.header.tareZ.to_binary_s
+
+  pp tare_bytes
+  
+  
+  # Compute filename
+  # filename = 1702163107
+  #pp Time.at(tsd_data.header.timestamp).to_datetime
+  ts = Time.at(tsd_data.header.timestamp).utc.to_datetime
+  #filename = ts.strftime('%y%m%d00.') + " + tsd_data.dataID[0..2]
+  filename = ""
+  puts Dir.pwd
+  100.times do |n|
+    filename = "%6.6s%02d.%.3s" % [ ts.strftime('%y%m%d'), n, tsd_data.dataID ]
+    break if ( ! File.exist?(filename) )
+  end
+  if (f = File.open(filename, "wb"))
+    puts "Creating Filename: #{filename}"
+    tsd_data.write(f)
+  else
+    puts "ERROR: Unable to open filename: #{filename}"
+    exit
+    next
+  end
+  
+  # Read Tare values
+
+  sdat_tare_offset = addr.to_i(16) + tsd_data.header.tareX.abs_offset
+  source.seek(data_start, IO::SEEK_SET)
+  cluster_count = 2 
+  fragment_db = []
+  while (buf = source.read(bytes_per_cluster)) do
+    cluster_offset = data_base + cluster_count * bytes_per_cluster
+    #puts "Cluster: #{cluster_count}, 0x%08x" % cluster_offset
+    pos = 0 
+    while (pos = buf.index(tare_bytes, pos)) do
+      if ( cluster_offset + pos == sdat_tare_offset)
+        #puts "TSD tare, cluster: %d, pos: %d" % [ cluster_count, pos ]
+        pos += tare_bytes.length
+        next
+      end
+      record_start = pos - 42
+      pos = record_start + tsd_data.recordSize 
+      remaining_bytes = bytes_per_cluster - pos
+      if (remaining_bytes < 48 && remaining_bytes > 0)
+        fragment = {
+          :timestamp => buf.slice(pos,8).unpack('V*').first,
+          :cluster   => cluster_count,
+          :pos       => pos,
+          :size      => remaining_bytes,
+          :type      => 1
+        }
+        fragment_db.push(fragment) 
+        puts ""
+        pp fragment
+        #puts "Possible remnant, cluster: %d, pos: %d, size: %d" % [ cluster_count, pos, remaining_bytes  ]
+      end
+      if (record_start < 0)
+        fragment = {
+          :timestamp => buf.slice(pos,8).unpack('V*').first,
+          :cluster   => cluster_count,
+          :pos       => 0,
+          :size      => pos,
+          :type      => 2
+        }
+        fragment_db.push(fragment) 
+        puts ""
+        pp fragment
+        #puts "TSD runt, cluster: %d, pos: %d" % [ cluster_count, record_start ]
+        next
+      end
+      if (record_start < 112 && record_start > 0)
+        fragment = {
+          :timestamp => buf.slice(record_start,8).unpack('V*').first,
+          :cluster   => cluster_count,
+          :pos       => 0,
+          :size      => record_start,
+          :type      => 3
+        }
+        if buf.slice(0,4) == "SDAT" || buf.slice(0,4) == "TADS"
+          fragment[:type] = 5
+          next
+        end
+        fragment_db.push(fragment) 
+        puts ""
+        pp fragment
+        #puts "TSD runt, cluster: %d, pos: %d" % [ cluster_count, record_start ]
+        next
+      end
+      current_record = buf.slice(record_start, tsd_data.recordSize) 
+      if ( current_record.length != tsd_data.recordSize )
+        fragment = {
+          :timestamp => buf.slice(record_start,8).unpack('V*').first,
+          :cluster   => cluster_count,
+          :pos       => record_start,
+          :size      => current_record.length,
+          :type      => 4 
+        }
+        fragment_db.push(fragment) 
+        puts ""
+        pp fragment
+        #puts "TSD runt, cluster: %d, pos: %d, size: %d" % [ cluster_count, record_start, current_record.length  ]
+        next
+      end
+      #puts "TSD: 0x%08x" % [ cluster_offset + record_start ] 
+      print "."
+    end
+    cluster_count += 1
+  end
+
+  # Search for all occurances of Tare value
+  # 42 bytes before start of tare
+  # 102 bytes after start of tare
+  # record offset and timestamp for each record
+  # order by timestamp (4 bytes at beginning of record)
+  # Write chunks to file in order
+  puts "(EOF)"
+
+  fragment_db.sort_by!{ |h| h[:timestamp] }
+  pp fragment_db
+  exit
+end
