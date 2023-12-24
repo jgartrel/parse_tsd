@@ -190,13 +190,9 @@ puts "Hello World"
 file = File.open("./test_data/23121000.TSD")
 pp tsd_data = TSD_Data.read(file)
 pp tsd_data.header.boardID
-file.close
 
 raise "Unknown Version" unless tsd_data.dataID == "TSD\x02"
-
-file = File.open("./test_data/test3.bin")
-pp tsd = TSD_Record_V2.read(file)
-pp tsd.snapshot
+raise "Record Size Mismatch" unless tsd_data.recordSize == TSD_Record_V2.new.num_bytes
 
 csv_row = TSD_Record_V2.csv_header
 
@@ -209,8 +205,12 @@ csv_row += [
   "%d" % tsd_data.header.serialNum,
   "%d" % tsd_data.header.alertMode,
 ]
-
 puts csv_row.join(",")
-puts tsd.to_csv
+
+while tsd = TSD_Record_V2.read(file)
+  #pp tsd.snapshot
+  puts tsd.to_csv
+  break
+end
 
 file.close
