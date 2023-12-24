@@ -185,7 +185,14 @@ class TSD_Record_V2 < BinData::Record
   end
 end
 
-file = File.open("./test_data/23121000.TSD")
+if ARGV.empty?
+  $stderr.puts "Usage: #{File.basename($0)} <infile.TSD>"
+  exit 1
+end
+
+infile = ARGV.shift
+
+file = File.open(infile)
 PP.pp(tsd_data = TSD_Data.read(file), $stderr)
 
 raise "Unknown Version" unless tsd_data.dataID == "TSD\x02"
@@ -204,10 +211,14 @@ csv_row += [
 ]
 puts csv_row.join(",")
 
+record_count = 0
 while tsd = TSD_Record_V2.read(file)
   #pp tsd.snapshot
   puts tsd.to_csv
+  record_count += 1
   break
 end
+
+$stderr.puts "\n#{record_count} record(s) exported\n"
 
 file.close

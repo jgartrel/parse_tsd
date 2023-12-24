@@ -11,8 +11,8 @@ install: ## Install bundler dependencies
 install-local: ## Install bundler dependencies from local cache
 	bundle install --path vendor/bundle --binstubs --clean --local
 
-run:    ## Run a development server
-	bundle exec ./parse_tsd.rb
+run:    ## Provide a demonstration run
+	bundle exec ./parse_tsd.rb ./test_data/23121000.TSD
 
 testargs ?= --order random
 ifneq ($(strip $(seed)),)
