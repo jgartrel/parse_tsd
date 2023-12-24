@@ -52,6 +52,93 @@ class TSD_Data < BinData::Record
   uint32     :recordSize
 end
 
+class TSD_Record_V1 < BinData::Record
+  endian :little
+
+  uint64 :timestamp
+  uint32 :millisTime
+  uint8  :state
+  uint8  :hwFlags
+  uint8  :swFlags
+  uint8  :alertLevel
+  uint16 :alertCount
+  uint16 :motionCount
+  uint16 :micCount
+  uint16 :vDDH
+  uint16 :vBat
+  uint16 :vSys
+  uint16 :vIn
+  uint16 :iChg
+  int16  :tempCore
+  int16  :tempAlt
+  int16  :x
+  int16  :y
+  int16  :z
+  int16  :tareX
+  int16  :tareY
+  int16  :tareZ
+  uint8  :heartRate
+  uint8  :breathRate
+  uint8  :chargeStat
+  uint8  :zoneCount
+  float_le    :zAngle
+  float_le    :zPitch
+  float_le    :zRoll
+
+  def pretty_print(pp)
+    self.each_pair do |k, v|
+      pp.text "#{k}:".ljust(20)
+      pp.text "#{v}\n"
+    end
+  end
+
+  def self.csv_header
+    csv_row = []
+    self.new.snapshot.each_pair do |k,v|
+      if v.respond_to?(:each_with_index)
+        v.each_with_index do |member,i|
+        csv_row.push("#{k}#{i}")
+      end
+      else
+        csv_row.push("#{k}")
+      end
+    end
+    csv_row
+  end
+
+  def to_csv
+    h = self.snapshot
+    [
+      "%d" % h[:timestamp],
+      "%d" % h[:millisTime],
+      "%d" % h[:state],
+      "0x%02X" % h[:hwFlags],
+      "0x%02X" % h[:swFlags],
+      "%d" % h[:alertLevel],
+      "%d" % h[:alertCount],
+      "%d" % h[:motionCount],
+      "%d" % h[:micCount],
+      "%d" % h[:vDDH],
+      "%d" % h[:vBat],
+      "%d" % h[:vSys],
+      "%d" % h[:tempCore],
+      "%d" % h[:tempAlt],
+      "%d" % h[:x],
+      "%d" % h[:y],
+      "%d" % h[:z],
+      "%d" % h[:tareX],
+      "%d" % h[:tareY],
+      "%d" % h[:tareZ],
+      "%d" % h[:heartRate],
+      "%d" % h[:breathRate],
+      "%d" % h[:zoneCount],
+      "%0.2f" % h[:zAngle],
+      "%0.2f" % h[:zPitch],
+      "%0.2f" % h[:zRoll]
+    ].join(",")
+  end
+end
+
 class TSD_Record_V2 < BinData::Record
   endian :little
 
