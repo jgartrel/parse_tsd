@@ -116,7 +116,7 @@ class TSD_Record_V2 < BinData::Record
 
   def self.csv_header
     csv_row = []
-    self.new.each_pair do |k,v|
+    self.new.snapshot.each_pair do |k,v|
       if v.respond_to?(:each_with_index)
         v.each_with_index do |member,i|
         csv_row.push("#{k}#{i}")
@@ -144,7 +144,7 @@ pp tsd.snapshot
 
 csv_row = []
 
-TSD_Record_V2.new.each_pair do |k,v|
+TSD_Record_V2.new.snapshot.each_pair do |k,v|
   if v.respond_to?(:each_with_index)
     v.each_with_index do |member,i|
       csv_row.push("#{k}#{i}")
