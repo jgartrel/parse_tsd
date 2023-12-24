@@ -212,16 +212,28 @@ csv_row += [
 puts csv_row.join(",")
 
 record_count = 0
+gap_count = 0
+max_time = 0
+last_time = nil
 
 begin
   while tsd = TSD_Record_V2.read(file)
+    this_time = tsd.timestamp.to_i
+    last_time ||= this_time
+    delta_time = this_time - last_time
+    max_time = (delta_time > max_time) ? delta_time : max_time
+    if delta_time > 12
+      gap_count += 1
+      $stderr.puts "Gap detected: #{delta_time.to_i} seconds"
+    end
     puts tsd.to_csv
     record_count += 1
+    last_time = this_time
     break if file.eof?
   end
 rescue Exception
   raise
 ensure
   file.close
-  $stderr.puts "\n#{record_count} record(s) exported\n"
+  $stderr.puts "\n#{record_count} record(s) exported, #{gap_count} gap(s), #{max_time} second(s) max\n"
 end
