@@ -113,6 +113,20 @@ class TSD_Record_V2 < BinData::Record
       pp.text "#{v}\n"
     end
   end
+
+  def self.csv_header
+    csv_row = []
+    self.new.each_pair do |k,v|
+      if v.respond_to?(:each_with_index)
+        v.each_with_index do |member,i|
+        csv_row.push("#{k}#{i}")
+      end
+      else
+        csv_row.push("#{k}")
+      end
+    end
+    csv_row
+  end
 end
 
 puts "Hello World"
