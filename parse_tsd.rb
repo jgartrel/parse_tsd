@@ -282,10 +282,10 @@ infile = ARGV.shift
 file = File.open(infile)
 PP.pp(tsd_data = TSD_Data.read(file), $stderr)
 
-raise "Unknown Version" unless tsd_data.dataID == "TSD\x02"
-raise "Record Size Mismatch" unless tsd_data.recordSize == TSD_Record_V2.new.num_bytes
+raise "Unknown Version" unless tsd_data.dataID == " DST"
+raise "Record Size Mismatch" unless tsd_data.recordSize == TSD_Record_V1.new.num_bytes
 
-csv_row = TSD_Record_V2.csv_header
+csv_row = TSD_Record_V1.csv_header
 
 csv_row += [
   "%d" % tsd_data.header.timestamp,
@@ -304,7 +304,7 @@ max_time = 0
 last_time = nil
 
 begin
-  while tsd = TSD_Record_V2.read(file)
+  while tsd = TSD_Record_V1.read(file)
     this_time = tsd.timestamp.to_i
     last_time ||= this_time
     delta_time = this_time - last_time
