@@ -185,11 +185,8 @@ class TSD_Record_V2 < BinData::Record
   end
 end
 
-puts "Hello World"
-
 file = File.open("./test_data/23121000.TSD")
-pp tsd_data = TSD_Data.read(file)
-pp tsd_data.header.boardID
+PP.pp(tsd_data = TSD_Data.read(file), $stderr)
 
 raise "Unknown Version" unless tsd_data.dataID == "TSD\x02"
 raise "Record Size Mismatch" unless tsd_data.recordSize == TSD_Record_V2.new.num_bytes
