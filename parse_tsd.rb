@@ -212,13 +212,16 @@ csv_row += [
 puts csv_row.join(",")
 
 record_count = 0
-while tsd = TSD_Record_V2.read(file)
-  #pp tsd.snapshot
-  puts tsd.to_csv
-  record_count += 1
-  break
+
+begin
+  while tsd = TSD_Record_V2.read(file)
+    puts tsd.to_csv
+    record_count += 1
+  end
+rescue EOFError
+else
+  raise
+ensure
+  file.close
+  $stderr.puts "\n#{record_count} record(s) exported\n"
 end
-
-$stderr.puts "\n#{record_count} record(s) exported\n"
-
-file.close
