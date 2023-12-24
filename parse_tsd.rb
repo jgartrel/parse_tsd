@@ -130,7 +130,7 @@ pp tsd.snapshot
 
 csv_row = []
 
-tsd.each_pair do |k,v|
+TSD_Record_V2.new.each_pair do |k,v|
   if v.respond_to?(:each_with_index)
     v.each_with_index do |member,i|
       csv_row.push("#{k}#{i}")
