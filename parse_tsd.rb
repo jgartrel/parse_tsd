@@ -198,17 +198,7 @@ file = File.open("./test_data/test3.bin")
 pp tsd = TSD_Record_V2.read(file)
 pp tsd.snapshot
 
-csv_row = []
-
-TSD_Record_V2.new.snapshot.each_pair do |k,v|
-  if v.respond_to?(:each_with_index)
-    v.each_with_index do |member,i|
-      csv_row.push("#{k}#{i}")
-    end
-  else
-    csv_row.push("#{k}")
-  end
-end
+csv_row = TSD_Record_V2.csv_header
 
 csv_row += [
   "%d" % tsd_data.header.timestamp,
@@ -221,23 +211,6 @@ csv_row += [
 ]
 
 puts csv_row.join(",")
-
-csv_row = []
-
-tsd.snapshot.each_pair do |k,v|
-  if v.respond_to?(:each_with_index)
-    v.each_with_index do |member,i|
-      csv_row.push(v.to_s)
-    end
-  else
-    csv_row.push(v.to_s)
-  end
-end
-
-puts csv_row.join(",")
-
-puts TSD_Record_V2.csv_header.join(",")
 puts tsd.to_csv
-puts tsd.fftRank[0].to_hex
 
 file.close
