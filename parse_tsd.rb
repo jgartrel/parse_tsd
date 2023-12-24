@@ -222,4 +222,22 @@ csv_row += [
 
 puts csv_row.join(",")
 
+csv_row = []
+
+tsd.snapshot.each_pair do |k,v|
+  if v.respond_to?(:each_with_index)
+    v.each_with_index do |member,i|
+      csv_row.push(v.to_s)
+    end
+  else
+    csv_row.push(v.to_s)
+  end
+end
+
+puts csv_row.join(",")
+
+puts TSD_Record_V2.csv_header.join(",")
+puts tsd.to_csv
+puts tsd.fftRank[0].to_hex
+
 file.close
