@@ -217,9 +217,9 @@ begin
   while tsd = TSD_Record_V2.read(file)
     puts tsd.to_csv
     record_count += 1
+    break if file.eof?
   end
-rescue EOFError
-else
+rescue Exception
   raise
 ensure
   file.close
